@@ -1,0 +1,16 @@
+name = "card-bookkeeping-api"
+main = "src/index.ts"
+compatibility_date = "2026-04-09"
+workers_dev = true
+
+[vars]
+CORS_ORIGIN = "*"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "card-bookkeeping-db"
+database_id = "6dfc9ae5-bd41-4fd0-9e1b-d61a9aafda4d"
+
+[[kv_namespaces]]
+binding = "APP_CACHE"
+id = "20ce40779e56403cad1113b82b5e759f"

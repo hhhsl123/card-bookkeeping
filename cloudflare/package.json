@@ -1,0 +1,15 @@
+{
+  "name": "card-bookkeeping-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "migrate": "wrangler d1 migrations apply card-bookkeeping-db"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250410.0",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.13.2"
+  }
+}

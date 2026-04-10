@@ -1,5 +1,10 @@
 import 'package:flutter/services.dart';
 
-void doCopy(String text) {
-  Clipboard.setData(ClipboardData(text: text));
+Future<void> doCopy(String text) async {
+  await Clipboard.setData(ClipboardData(text: text));
+}
+
+Future<String?> doRead() async {
+  final data = await Clipboard.getData(Clipboard.kTextPlain);
+  return data?.text;
 }

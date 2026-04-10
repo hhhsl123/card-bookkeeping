@@ -1,34 +1,66 @@
-# 卡片记账系统
+# Card Bookkeeping
 
-双人/多人卡片买卖记账工具，支持 Android APP 和 iOS/Web 网页端。
+Card bookkeeping for batch import, exact-value picking, settlement, and multi-device sync.
 
-## 功能
+## Stack
 
-- 批次管理：添加、删除批次，设置汇率和面值
-- 卖卡：选择卡片标记售出，支持坏卡标记（含余额）
-- 查卡：查看剩余卡片，组合凑面值，一键提卡
-- 结算：按人汇总销售，清账功能
-- 多端同步：通过 GitHub API 实现数据同步，无需 VPN
+- `flutter_app/`: Flutter Web + Android client
+- `cloudflare/`: Cloudflare Worker + D1 + KV backend
+- `.github/workflows/`: Flutter CI, Cloudflare deploy, Android release
 
-## 项目结构
+## What Changed
 
-```
-flutter_app/    # Flutter 源码（Android + Web）
-web-dist/       # 编译好的 Web 版本（部署到 GitHub Pages）
-```
+- Replaced the old GitHub-token sync path with a Worker API scaffold
+- Rebuilt the app IA to `首页 / 库存 / 提卡 / 算账 / 设置`
+- Added clipboard-first import flow and exact-value picking flow
+- Added Cloudflare free-tier deployment config
+- Added migration tooling for legacy `data.json`
+- Replaced the placeholder widget test with business-oriented tests
 
-## 使用方式
+## Local Development
 
-- **iOS / 电脑浏览器**：访问 https://hhhsl123.github.io/card-book-app/
-- **Android APP**：从 [Releases](https://github.com/hhhsl123/card-book-apk/releases) 下载 APK
-
-## 开发
+### Flutter
 
 ```bash
 cd flutter_app
 flutter pub get
-flutter run -d chrome    # Web 调试
-flutter run              # Android 调试
-flutter build web --release --base-href "/card-book-app/"
-flutter build apk --release
+flutter run -d chrome --dart-define=API_BASE_URL=https://your-worker.workers.dev
+flutter test
+flutter analyze
+```
+
+### Cloudflare
+
+```bash
+cd cloudflare
+pnpm install
+pnpm wrangler d1 migrations apply card-bookkeeping-db
+pnpm wrangler dev
+```
+
+## Deploy
+
+- Web production: Cloudflare Pages
+- API: Cloudflare Workers
+- Database: Cloudflare D1
+- Cache: Cloudflare KV
+- Android release: GitHub Releases
+
+Set these GitHub secrets/vars before enabling deploy workflows:
+
+- `secrets.CLOUDFLARE_API_TOKEN`
+- `secrets.CLOUDFLARE_ACCOUNT_ID`
+- `vars.CLOUDFLARE_PAGES_PROJECT`
+- `vars.API_BASE_URL`
+
+## Legacy Migration
+
+Import the previous GitHub `data.json` into the new Worker backend:
+
+```bash
+node cloudflare/scripts/migrate-legacy.mjs \
+  --source ./legacy-data.json \
+  --api-base https://your-worker.workers.dev \
+  --workspace-pin YOUR_PIN \
+  --workspace-id default
 ```

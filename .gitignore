@@ -1,0 +1,9 @@
+.DS_Store
+.idea/
+.vscode/
+node_modules/
+.wrangler/
+cloudflare/node_modules/
+flutter_app/.fvm/flutter_sdk
+flutter_app/build/
+web-dist/

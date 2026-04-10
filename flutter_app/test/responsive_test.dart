@@ -11,7 +11,7 @@ import 'test_data.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('home shell renders dashboard actions', (tester) async {
+  Future<void> pumpShell(WidgetTester tester, Size size) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final provider = AppProvider()
       ..data = buildSampleData()
@@ -19,6 +19,7 @@ void main() {
       ..initialized = true
       ..syncStatus = '本地模式';
 
+    await tester.binding.setSurfaceSize(size);
     await tester.pumpWidget(
       ChangeNotifierProvider<AppProvider>.value(
         value: provider,
@@ -26,9 +27,16 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+  }
 
-    expect(find.text('从剪贴板加卡'), findsOneWidget);
-    expect(find.text('快捷提卡'), findsOneWidget);
-    expect(find.text('进入算账'), findsOneWidget);
+  testWidgets('shows bottom navigation on phone width', (tester) async {
+    await pumpShell(tester, const Size(390, 844));
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+  });
+
+  testWidgets('shows navigation rail on desktop width', (tester) async {
+    await pumpShell(tester, const Size(1280, 900));
+    expect(find.byType(NavigationRail), findsOneWidget);
   });
 }
