@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/data.dart';
 
-const String kDefaultApiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'https://card-bookkeeping-api.ywu1286.workers.dev');
+const String kDefaultApiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
 
 class StorageService {
   static const String _dataKey = 'cardBookkeeping_v4';
