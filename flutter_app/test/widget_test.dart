@@ -1,34 +1,30 @@
+// This is a basic Flutter widget test.
+//
+// To perform an interaction with a widget in your test, use the WidgetTester
+// utility in the flutter_test package. For example, you can send tap and scroll
+// gestures. You can also use WidgetTester to find child widgets in the widget
+// tree, read text, and verify that the values of widget properties are correct.
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_app/main.dart';
-import 'package:flutter_app/providers/app_provider.dart';
-
-import 'test_data.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    // Build our app and trigger a frame.
+    await tester.pumpWidget(const MyApp());
 
-  testWidgets('home shell renders dashboard actions', (tester) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-    final provider = AppProvider()
-      ..data = buildSampleData()
-      ..myRole = '星河'
-      ..initialized = true
-      ..syncStatus = '本地模式';
+    // Verify that our counter starts at 0.
+    expect(find.text('0'), findsOneWidget);
+    expect(find.text('1'), findsNothing);
 
-    await tester.pumpWidget(
-      ChangeNotifierProvider<AppProvider>.value(
-        value: provider,
-        child: const MaterialApp(home: HomeShell()),
-      ),
-    );
-    await tester.pumpAndSettle();
+    // Tap the '+' icon and trigger a frame.
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pump();
 
-    expect(find.text('从剪贴板加卡'), findsOneWidget);
-    expect(find.text('快捷提卡'), findsOneWidget);
-    expect(find.text('进入算账'), findsOneWidget);
+    // Verify that our counter has incremented.
+    expect(find.text('0'), findsNothing);
+    expect(find.text('1'), findsOneWidget);
   });
 }

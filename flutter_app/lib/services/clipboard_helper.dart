@@ -5,16 +5,8 @@ import 'clipboard_web.dart' if (dart.library.io) 'clipboard_native.dart' as plat
 
 Future<void> copyToClipboard(String text) async {
   if (kIsWeb) {
-    await platform.doCopy(text);
-    return;
+    platform.doCopy(text);
+  } else {
+    await Clipboard.setData(ClipboardData(text: text));
   }
-  await Clipboard.setData(ClipboardData(text: text));
-}
-
-Future<String?> readClipboardText() async {
-  if (kIsWeb) {
-    return platform.doRead();
-  }
-  final data = await Clipboard.getData(Clipboard.kTextPlain);
-  return data?.text;
 }

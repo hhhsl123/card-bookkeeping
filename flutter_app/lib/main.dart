@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import 'pages/dashboard_page.dart';
-import 'pages/inventory_page.dart';
-import 'pages/pick_page.dart';
+import 'providers/app_provider.dart';
+import 'pages/batch_page.dart';
+import 'pages/sell_page.dart';
+import 'pages/check_page.dart';
 import 'pages/settle_page.dart';
 import 'pages/settings_page.dart';
-import 'providers/app_provider.dart';
 
 void main() {
   runApp(
@@ -23,156 +22,140 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Card Bookkeeping',
+      title: '双人卡片记账',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        colorSchemeSeed: const Color(0xFF4a6cf7),
         useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF0C7D69),
-        scaffoldBackgroundColor: const Color(0xFFF5F4EF),
-        cardTheme: const CardThemeData(
-          color: Colors.white,
-          elevation: 0,
-          surfaceTintColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(22)),
-          ),
-        ),
+        brightness: Brightness.light,
       ),
-      home: const HomeShell(),
+      home: const HomePage(),
     );
   }
 }
 
-class HomeShell extends StatefulWidget {
-  const HomeShell({super.key});
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
   @override
-  State<HomeShell> createState() => _HomeShellState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomePageState extends State<HomePage> {
   int _index = 0;
 
-  final List<String> _titles = const <String>['首页', '库存', '提卡', '算账', '设置'];
-
-  late final VoidCallback _providerListener;
-  AppProvider? _provider;
+  final _pages = const [
+    BatchPage(),
+    SellPage(),
+    CheckPage(),
+    SettlePage(),
+    SettingsPage(),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _providerListener = () {
-      final provider = context.read<AppProvider>();
-      final message = provider.syncMessage;
-      if (message != null && mounted) {
-        provider.clearSyncMessage();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-      }
-    };
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _provider = context.read<AppProvider>();
-      _provider?.addListener(_providerListener);
-      _maybeAskRole();
+      _checkRole();
+      _listenSync();
     });
   }
 
-  @override
-  void dispose() {
-    _provider?.removeListener(_providerListener);
-    super.dispose();
+  void _listenSync() {
+    final prov = context.read<AppProvider>();
+    prov.addListener(() {
+      final msg = prov.syncMessage;
+      if (msg != null && mounted) {
+        prov.clearSyncMessage();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(msg),
+          duration: const Duration(seconds: 1),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: msg.contains('成功') ? Colors.green : Colors.red,
+        ));
+      }
+    });
   }
 
-  void _maybeAskRole() {
-    final provider = context.read<AppProvider>();
-    if ((provider.myRole ?? '').isEmpty && provider.data.persons.isNotEmpty) {
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('选择身份'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: provider.data.persons
-                .map(
-                  (person) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: () async {
-                          await provider.setRole(person);
-                          if (dialogContext.mounted) Navigator.pop(dialogContext);
-                        },
-                        child: Text('我是 $person'),
-                      ),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-        ),
-      );
+  void _checkRole() {
+    final prov = context.read<AppProvider>();
+    if (prov.myRole == null || prov.myRole!.isEmpty) {
+      _showRolePicker();
     }
+  }
+
+  void _showRolePicker() {
+    final prov = context.read<AppProvider>();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('你是谁？'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('首次使用，请选择你的身份'),
+            const SizedBox(height: 16),
+            ...prov.data.persons.map((name) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    prov.setRole(name);
+                    Navigator.pop(ctx);
+                  },
+                  child: Text('我是 $name'),
+                ),
+              ),
+            )),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<AppProvider>();
-    final pages = <Widget>[
-      DashboardPage(
-        onNavigateToSettlement: () => setState(() => _index = 3),
+    final prov = context.watch<AppProvider>();
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('💳 记账 ${prov.myRole != null ? "(${prov.myRole})" : ""}'),
+        centerTitle: true,
+        actions: [
+          if (prov.syncStatus.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Text(prov.syncStatus, style: TextStyle(fontSize: 11, color: prov.syncStatus == '同步失败' ? Colors.red : Colors.grey[500])),
+            ),
+          if (prov.syncing)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.sync),
+              tooltip: '同步',
+              onPressed: () => prov.pullFromCloud(),
+            ),
+        ],
       ),
-      const InventoryPage(),
-      const PickPage(),
-      const SettlePage(),
-      const SettingsPage(),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final useRail = constraints.maxWidth >= 900;
-        final scaffoldBody = IndexedStack(index: _index, children: pages);
-
-        return Scaffold(
-          appBar: AppBar(
-            title: Text('${_titles[_index]}${provider.myRole != null ? ' · ${provider.myRole}' : ''}'),
-            actions: const [],
-          ),
-          body: useRail
-              ? Row(
-                  children: [
-                    NavigationRail(
-                      selectedIndex: _index,
-                      onDestinationSelected: (value) => setState(() => _index = value),
-                      labelType: NavigationRailLabelType.all,
-                      destinations: const [
-                        NavigationRailDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: Text('首页')),
-                        NavigationRailDestination(icon: Icon(Icons.inventory_2_outlined), selectedIcon: Icon(Icons.inventory_2), label: Text('库存')),
-                        NavigationRailDestination(icon: Icon(Icons.flash_on_outlined), selectedIcon: Icon(Icons.flash_on), label: Text('提卡')),
-                        NavigationRailDestination(icon: Icon(Icons.calculate_outlined), selectedIcon: Icon(Icons.calculate), label: Text('算账')),
-                        NavigationRailDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: Text('设置')),
-                      ],
-                    ),
-                    const VerticalDivider(width: 1),
-                    Expanded(child: scaffoldBody),
-                  ],
-                )
-              : scaffoldBody,
-          bottomNavigationBar: useRail
-              ? null
-              : NavigationBar(
-                  selectedIndex: _index,
-                  onDestinationSelected: (value) => setState(() => _index = value),
-                  destinations: const [
-                    NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: '首页'),
-                    NavigationDestination(icon: Icon(Icons.inventory_2_outlined), selectedIcon: Icon(Icons.inventory_2), label: '库存'),
-                    NavigationDestination(icon: Icon(Icons.flash_on_outlined), selectedIcon: Icon(Icons.flash_on), label: '提卡'),
-                    NavigationDestination(icon: Icon(Icons.calculate_outlined), selectedIcon: Icon(Icons.calculate), label: '算账'),
-                    NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: '设置'),
-                  ],
-                ),
-        );
-      },
+      body: RefreshIndicator(
+        onRefresh: () => context.read<AppProvider>().pullFromCloud(),
+        child: _pages[_index],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: (i) => setState(() => _index = i),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home), label: '首页'),
+          NavigationDestination(icon: Icon(Icons.sell), label: '卖卡'),
+          NavigationDestination(icon: Icon(Icons.search), label: '查卡'),
+          NavigationDestination(icon: Icon(Icons.calculate), label: '结算'),
+          NavigationDestination(icon: Icon(Icons.settings), label: '设置'),
+        ],
+      ),
     );
   }
 }
