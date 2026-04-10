@@ -85,22 +85,37 @@ echo "   ✅ Worker 已部署: $WORKER_URL"
 cd "$REPO_ROOT/flutter_app"
 
 echo "📦 安装前端依赖..."
-flutter pub get > /dev/null 2>&1
+if ! flutter pub get > /dev/null 2>&1; then
+  echo "   ❌ flutter pub get 失败"
+  flutter pub get
+  exit 1
+fi
 
 echo "🔨 构建 Web..."
-flutter build web --release --dart-define="API_BASE_URL=$WORKER_URL" > /dev/null 2>&1
+if ! flutter build web --release > /dev/null 2>&1; then
+  echo "   ❌ Web 构建失败"
+  flutter build web --release
+  exit 1
+fi
 cp web/_redirects build/web/_redirects 2>/dev/null || true
 echo "   ✅ Web 构建完成"
 
 echo "🌐 部署到 Cloudflare Pages..."
-PAGES_OUTPUT=$(npx wrangler pages deploy build/web --project-name card-bookkeeping --commit-dirty=true 2>&1)
+if ! wrangler pages deploy build/web --project-name card-bookkeeping --commit-dirty=true 2>&1 | tail -3; then
+  echo "   ❌ Pages 部署失败"
+  exit 1
+fi
 echo "   ✅ Pages 已部署"
 
 echo ""
 echo "🔨 构建 Android APK..."
-flutter build apk --release --dart-define="API_BASE_URL=$WORKER_URL" > /dev/null 2>&1
-APK_PATH="$REPO_ROOT/flutter_app/build/app/outputs/flutter-apk/app-release.apk"
-echo "   ✅ APK: $APK_PATH"
+if ! flutter build apk --release > /dev/null 2>&1; then
+  echo "   ⚠️ APK 构建失败（可选，继续）"
+  APK_PATH="(构建失败)"
+else
+  APK_PATH="$REPO_ROOT/flutter_app/build/app/outputs/flutter-apk/app-release.apk"
+  echo "   ✅ APK: $APK_PATH"
+fi
 
 echo ""
 echo "==================================="
@@ -110,8 +125,5 @@ echo "后端 API:  $WORKER_URL"
 echo "前端网页:  https://card-bookkeeping.pages.dev"
 echo "安卓 APK:  $APK_PATH"
 echo ""
-echo "使用方式："
-echo "1. 打开 App 或网页"
-echo "2. 在设置页设置一个 Workspace PIN"
-echo "3. 开始使用！"
+echo "注意：当前数据同步通过 GitHub，不依赖后端 API"
 echo "==================================="

@@ -79,6 +79,10 @@ class SettingsPage extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
+        // Cloudflare connection config
+        const _SyncConfigSection(),
+        const SizedBox(height: 16),
+
         // Sync info
         Card(
           child: Padding(
@@ -103,6 +107,80 @@ class SettingsPage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SyncConfigSection extends StatefulWidget {
+  const _SyncConfigSection();
+
+  @override
+  State<_SyncConfigSection> createState() => _SyncConfigSectionState();
+}
+
+class _SyncConfigSectionState extends State<_SyncConfigSection> {
+  final _pinCtrl = TextEditingController();
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final pin = await StorageService.getPin();
+    _pinCtrl.text = pin;
+    setState(() => _loaded = true);
+  }
+
+  @override
+  void dispose() {
+    _pinCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded) return const SizedBox.shrink();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Cloudflare 连接', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 4),
+            Text('配置 Workspace PIN 以启用云端同步。', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _pinCtrl,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Workspace PIN',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                icon: const Icon(Icons.save, size: 16),
+                label: const Text('保存'),
+                onPressed: () async {
+                  await StorageService.setPin(_pinCtrl.text.trim());
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('连接配置已保存'), duration: Duration(seconds: 2)),
+                    );
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
